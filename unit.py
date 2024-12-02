@@ -5,7 +5,7 @@ from game import *
 
 # Constantes
 GRID_SIZE = 8
-CELL_SIZE = 50
+CELL_SIZE = 40
 WIDTH = GRID_SIZE * CELL_SIZE
 HEIGHT = GRID_SIZE * CELL_SIZE
 FPS = 30
@@ -71,36 +71,7 @@ class Unit:
         self.team = team  # 'player' ou 'enemy'
         self.is_selected = False
 
-    def move(self, dx, dy, terrain):
-        """Déplace l'unité de dx, dy en fonction des indices de la grille (1 case par direction)."""
-        new_x = self.x + dx
-        new_y = self.y + dy
-    
-    # Vérifier si les indices sont valides et dans les limites de la grille
-        if 0 <= new_x < len(terrain.cases) and 0 <= new_y < len(terrain.cases[0]):
-            target_case = terrain.cases[new_x][new_y]  # Récupère la case cible
-        
-        # Si l'unité rencontre un obstacle, elle ne peut pas avancer
-            if target_case.type_case == 'obstacle':
-                return False
-        
-        # Si l'unité passe sur de l'eau ou du feu, elle meurt
-            if target_case.type_case == 'eau' or target_case.type_case == 'feu':
-                self.health = 0 
-                pygame.quit()
-                exit() # L'unité meurt
-                
-        
-        # Si aucune condition n'est remplie, l'unité peut se déplacer
-            self.x = new_x
-            self.y = new_y
-            return True
-    
-    # Si les indices sont hors limites, l'unité ne peut pas se déplacer
-        return False
-
-
-
+   
        
 
     def attack(self, target):
@@ -120,37 +91,60 @@ class Unit:
 
 
 
-class Type_Unite(Unit):  # Héritage de la classe Unit
-    def __init__(self, nom, x, y, health, attack_power, team, defense, vitesse, competences=None, image_path=None):
-        super().__init__(x, y, health, attack_power, team)
+class Type_Unite:
+    def __init__(self, nom, x, y, vie, attaque, equipe, defense, deplacement_distance, competences, image_path):
         self.nom = nom
+        self.x = x
+        self.y = y
+        self.vie = vie
+        self.attaque = attaque
+        self.equipe = equipe
         self.defense = defense
-        self.vitesse = vitesse
-        self.competences = competences if competences else []
+        self.deplacement_distance = deplacement_distance  # La distance que l'unité peut parcourir en une fois
+        self.competences = competences
+        self.image_path = image_path
+        self.image = pygame.image.load(image_path) if image_path else None
+        self.is_selected = False
 
-        # Chargement de l'image (fichiers dans le même répertoire)
-        if image_path:
-            try:
-                self.image = pygame.image.load(image_path)
-                self.image = pygame.transform.scale(self.image, (CELL_SIZE, CELL_SIZE))
-            except pygame.error as e:
-                print(f"Erreur lors du chargement de l'image {image_path}: {e}")
-                self.image = None
-        else:
-            print(f"Aucun chemin d'image fourni pour {nom}.")
+    def move(self, dx, dy, terrain):
+        """Déplace l'unité d'une case en fonction de sa capacité de déplacement."""
+        # Calculer la nouvelle position
+        new_x = self.x + dx
+        new_y = self.y + dy
         
+        # Vérifier si la position est valide
+        if 0 <= new_x < len(terrain.cases) and 0 <= new_y < len(terrain.cases[0]):
+            target_case = terrain.cases[new_x][new_y]
+
+            # Si la case est un obstacle, l'unité ne peut pas avancer
+            if target_case.type_case == 'obstacle':
+                return False
+
+            # Si l'unité passe sur de l'eau ou du feu, elle meurt
+            if target_case.type_case == 'eau' or target_case.type_case == 'feu':
+                self.vie = 0
+                pygame.quit()
+                exit()  # L'unité meurt
+
+            # Si tout est valide, on déplace l'unité d'une case
+            self.x = new_x
+            self.y = new_y
+            return True
+        else:
+            return False  # Si la case cible est en dehors des limites
+
 
 
     def attaquer(self, cible):
         """Effectuer une attaque en prenant en compte la défense de la cible."""
-        degats = max(0, self.attack_power - cible.defense)
+        degats = max(0, self.attaque - cible.defense)
         cible.recevoir_degats(degats)
 
     def recevoir_degats(self, degats):
         """Réduire les points de vie en fonction des dégâts subis."""
-        self.health -= degats
-        if self.health < 0:
-            self.health = 0
+        self.vie -= degats
+        if self.vie < 0:
+            self.vie = 0
 
     def utiliser_competence(self, index, cible):
         """Utiliser une compétence sur une cible."""
@@ -158,18 +152,11 @@ class Type_Unite(Unit):  # Héritage de la classe Unit
             self.competences[index].appliquer(cible)
 
     def draw(self, surface):
-        # """Dessiner l'unité avec une image si disponible."""
         if self.image:
             surface.blit(self.image, (self.x * CELL_SIZE, self.y * CELL_SIZE))
-        else:  # Dessiner un cercle si aucune image n'est disponible
-            color = BLUE if self.team == 'player' else RED
-            pygame.draw.circle(surface, color, (self.x * CELL_SIZE + CELL_SIZE // 2, self.y * CELL_SIZE // 2), CELL_SIZE // 3)
-
-    def __str__(self):
-        competences_str = [competence.nom for competence in self.competences]
-        return (f"Unité({self.nom}, {self.x}, {self.y}, Vie: {self.health}, Attaque: {self.attack_power}, "
-                f"Défense: {self.defense}, Vitesse: {self.vitesse}, "
-                f"Compétences: {competences_str})")
+        else:
+            color = BLUE if self.equipe == 'player' else RED
+            pygame.draw.circle(surface, color, (self.x * CELL_SIZE + CELL_SIZE // 2, self.y * CELL_SIZE + CELL_SIZE // 2), CELL_SIZE // 3)
 
 
 # Exemple de compétence et effet
@@ -193,6 +180,8 @@ def soin_effet(cible):
 def attaque_puissante_effet(cible):
     degats = 50
     cible.recevoir_degats(degats)
+
+
 
 
 

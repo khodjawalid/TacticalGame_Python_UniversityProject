@@ -7,10 +7,10 @@ from game import *
 icon_feu = pygame.image.load("feu.png")
 icon_eau = pygame.image.load("eau.png")
 icon_obstacle = pygame.image.load("obstacle.png")
-
-icon_feu = pygame.transform.scale(icon_feu, (50, 50))
-icon_eau = pygame.transform.scale(icon_eau, (50, 50))
-icon_obstacle = pygame.transform.scale(icon_obstacle, (50, 50))
+CELL_SIZE = 40
+icon_feu = pygame.transform.scale(icon_feu, (CELL_SIZE, CELL_SIZE))
+icon_eau = pygame.transform.scale(icon_eau, (CELL_SIZE, CELL_SIZE))
+icon_obstacle = pygame.transform.scale(icon_obstacle, (CELL_SIZE, CELL_SIZE))
 
 class Case:
     def __init__(self, type_case, x, y, effet=None):
@@ -21,7 +21,7 @@ class Case:
 
     def afficher(self, screen):
         """Calculer la position sur la grille et afficher l'icône associée."""
-        position = (self.x * 50, self.y * 50)
+        position = (self.x * CELL_SIZE, self.y * CELL_SIZE)
 
         if self.type_case == 'obstacle':
             screen.blit(icon_obstacle, position)
@@ -44,11 +44,11 @@ class Terrain:
                 case_type = random.choice(['traversable', 'obstacle', 'eau', 'feu'])
                 
                
-                if random.random() < 0.05:  # 
+                if random.random() < 0.00001:  # 
                     case_type = 'obstacle'
-                elif random.random() < 0.05:  
+                elif random.random() < 0.0001:  
                     case_type = 'eau'
-                elif random.random() < 0.05:  
+                elif random.random() < 0.00001:  
                     case_type = 'feu'
                 else:
                     case_type = 'traversable'  
